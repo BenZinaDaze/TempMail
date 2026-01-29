@@ -6,6 +6,9 @@ import crypto from 'crypto';
  * 消息通过 WebSocket 直接推送到前端
  */
 class MemoryStore {
+    // 邮箱过期时间（毫秒），从环境变量读取，默认 60 分钟
+    static EMAIL_EXPIRY_MS = (parseInt(process.env.EMAIL_EXPIRY_MINUTES) || 60) * 60 * 1000;
+
     constructor(domain) {
         if (!domain) {
             throw new Error('MAIL_DOMAIN is required. Please set it in environment variables.');
@@ -62,12 +65,22 @@ class MemoryStore {
         // 如果邮箱已存在，会直接覆盖
         this.sessions.set(address, {
             createdAt: Date.now(),
-            expiresAt: Date.now() + 60 * 60 * 1000 // 60分钟
+            expiresAt: Date.now() + MemoryStore.EMAIL_EXPIRY_MS
         });
 
         this.stats.totalEmailsCreated++;
         console.log(`Created email: ${address}`);
         return address;
+    }
+
+    /**
+     * 检查会话是否有效（存在且未过期）
+     * @private
+     * @param {object|null} session - 会话对象
+     * @returns {boolean} 会话是否有效
+     */
+    _isSessionValid(session) {
+        return session !== null && session !== undefined && Date.now() < session.expiresAt;
     }
 
     /**
@@ -77,7 +90,7 @@ class MemoryStore {
      */
     receiveMessage(address) {
         const session = this.sessions.get(address);
-        if (session && Date.now() < session.expiresAt) {
+        if (this._isSessionValid(session)) {
             this.stats.totalMessagesReceived++;
             return true;
         }
@@ -91,7 +104,7 @@ class MemoryStore {
      */
     getSession(address) {
         const session = this.sessions.get(address);
-        if (session && Date.now() < session.expiresAt) {
+        if (this._isSessionValid(session)) {
             return session;
         }
         return null;
@@ -104,7 +117,7 @@ class MemoryStore {
      */
     hasEmail(address) {
         const session = this.sessions.get(address);
-        return session && Date.now() < session.expiresAt;
+        return this._isSessionValid(session);
     }
 
     /**
