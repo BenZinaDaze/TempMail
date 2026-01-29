@@ -127,7 +127,7 @@ export default function App() {
         <span>© 2026 TempMail</span>
         <span>·</span>
         <a
-          href="https://github.com/benz1/tempmail"
+          href="https://github.com/BenZinaDaze/TempMail"
           target="_blank"
           rel="noopener noreferrer"
         >
