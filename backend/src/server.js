@@ -203,13 +203,16 @@ function gracefulShutdown(signal) {
         ws.close(1000, 'Server shutting down');
     });
 
-    // 3. 设置超时强制退出（避免卡住）
+    // 3. 清理内存存储资源（停止清理定时器）
+    store.destroy();
+
+    // 4. 设置超时强制退出（避免卡住）
     setTimeout(() => {
         console.error('⚠️  Forced shutdown due to timeout');
         process.exit(1);
     }, 5000); // 5秒超时
 
-    // 4. 正常退出
+    // 5. 正常退出
     setTimeout(() => {
         console.log('✅ Graceful shutdown completed');
         process.exit(0);

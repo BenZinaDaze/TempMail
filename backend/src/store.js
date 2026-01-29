@@ -24,6 +24,9 @@ class MemoryStore {
             totalMessagesReceived: 0
         };
 
+        // 清理定时器引用（用于内存泄漏修复）
+        this.cleanupInterval = null;
+
         // 启动自动清理
         this.startCleanup();
     }
@@ -119,7 +122,8 @@ class MemoryStore {
      * 自动清理过期邮箱
      */
     startCleanup() {
-        setInterval(() => {
+        // 保存定时器引用，避免内存泄漏
+        this.cleanupInterval = setInterval(() => {
             const now = Date.now();
             let cleaned = 0;
 
@@ -135,6 +139,23 @@ class MemoryStore {
                 console.log(`Cleaned ${cleaned} expired email(s)`);
             }
         }, 60000); // 每分钟检查
+    }
+
+    /**
+     * 停止清理定时器
+     */
+    stopCleanup() {
+        if (this.cleanupInterval !== null) {
+            clearInterval(this.cleanupInterval);
+            this.cleanupInterval = null;
+        }
+    }
+
+    /**
+     * 销毁存储实例，清理所有资源
+     */
+    destroy() {
+        this.stopCleanup();
     }
 
     /**
