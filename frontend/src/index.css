@@ -65,14 +65,16 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   padding: var(--spacing-lg);
+  position: relative;
 }
 
 /* 头部 */
 .app header {
   text-align: center;
-  margin-bottom: var(--spacing-xl);
   animation: fadeInDown 0.6s ease-out;
+  margin-bottom: var(--spacing-lg);
 }
 
 .app header h1 {
@@ -751,8 +753,23 @@ body {
 
 /* 响应式 */
 @media (max-width: 768px) {
+  .app {
+    padding: var(--spacing-md);
+    justify-content: flex-start; /* 小屏幕时从顶部开始，避免内容被压缩 */
+    padding-top: var(--spacing-xl);
+  }
+
   .app header h1 {
     font-size: 2rem;
+  }
+
+  .app header p {
+    font-size: 1rem;
+  }
+
+  .email-generator {
+    max-width: 100%;
+    padding: var(--spacing-lg);
   }
 
   .email-info .meta {
