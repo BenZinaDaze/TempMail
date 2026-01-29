@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import logger from './utils/logger.js';
 
 /**
  * 内存存储管理器（轻量级）
@@ -69,7 +70,7 @@ class MemoryStore {
         });
 
         this.stats.totalEmailsCreated++;
-        console.log(`Created email: ${address}`);
+        logger.info({ email: address }, 'Created email: %s', address);
         return address;
     }
 
@@ -149,7 +150,7 @@ class MemoryStore {
             }
 
             if (cleaned > 0) {
-                console.log(`Cleaned ${cleaned} expired email(s)`);
+                logger.info({ cleaned }, 'Cleaned %d expired email(s)', cleaned);
             }
         }, 60000); // 每分钟检查
     }

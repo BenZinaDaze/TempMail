@@ -1,5 +1,6 @@
 import { SMTPServer } from 'smtp-server';
 import { simpleParser } from 'mailparser';
+import logger from './utils/logger.js';
 
 /**
  * 启动 SMTP 邮件接收服务（优化版）
@@ -17,27 +18,27 @@ function startSMTPServer(store, wsNotify) {
 
         // 增强的 SMTP 能力声明
         onConnect(session, callback) {
-            console.log(`[SMTP] Connection from ${session.remoteAddress}`);
+            logger.info({ remoteAddress: session.remoteAddress }, '[SMTP] Connection from %s', session.remoteAddress);
             callback();
         },
 
         onMailFrom(address, session, callback) {
-            console.log(`[SMTP] MAIL FROM: ${address.address}`);
+            logger.info({ address: address.address }, '[SMTP] MAIL FROM: %s', address.address);
             callback();
         },
 
         onRcptTo(address, session, callback) {
-            console.log(`[SMTP] RCPT TO: ${address.address}`);
+            logger.info({ address: address.address }, '[SMTP] RCPT TO: %s', address.address);
 
             // 验证收件人域名
             if (!address.address.endsWith(`@${domain}`)) {
-                console.warn(`[SMTP] Rejected: invalid domain for ${address.address}`);
+                logger.warn({ address: address.address }, '[SMTP] Rejected: invalid domain for %s', address.address);
                 return callback(new Error(`550 5.1.1 We do not serve this domain`));
             }
 
             // 验证邮箱是否存在且未过期
             if (!store.hasEmail(address.address)) {
-                console.warn(`[SMTP] Rejected: email not found or expired - ${address.address}`);
+                logger.warn({ address: address.address }, '[SMTP] Rejected: email not found or expired - %s', address.address);
                 return callback(new Error(`550 5.1.1 Mailbox does not exist or has expired`));
             }
 
@@ -47,17 +48,21 @@ function startSMTPServer(store, wsNotify) {
         onData(stream, session, callback) {
             simpleParser(stream, (err, mail) => {
                 if (err) {
-                    console.error('[SMTP] Failed to parse email:', err);
+                    logger.error({ error: err }, '[SMTP] Failed to parse email');
                     return callback(err);
                 }
 
                 // 从 session.envelope 获取收件人
                 const recipients = session.envelope.rcptTo || [];
 
-                console.log(`[SMTP] Processing email:
-  From: ${mail.from?.text || 'unknown'}
-  Subject: ${mail.subject || '(no subject)'}
-  Recipients: ${recipients.length}`);
+                logger.info({
+                    from: mail.from?.text || 'unknown',
+                    subject: mail.subject || '(no subject)',
+                    recipientCount: recipients.length
+                }, '[SMTP] Processing email: From: %s, Subject: %s, Recipients: %d', 
+                    mail.from?.text || 'unknown', 
+                    mail.subject || '(no subject)', 
+                    recipients.length);
 
                 // 处理所有收件人
                 recipients.forEach(recipient => {
@@ -83,10 +88,10 @@ function startSMTPServer(store, wsNotify) {
 
                     // 纯推送模式：验证邮箱有效后直接推送，不存储
                     if (store.receiveMessage(to)) {
-                        console.log(`[SMTP] → Pushing message to ${to}: "${message.subject}"`);
+                        logger.info({ email: to, subject: message.subject }, '[SMTP] → Pushing message to %s: "%s"', to, message.subject);
                         wsNotify(to, message);
                     } else {
-                        console.error(`[SMTP] ✗ Invalid email session: ${to}`);
+                        logger.error({ email: to }, '[SMTP] ✗ Invalid email session: %s', to);
                     }
                 });
 
@@ -95,18 +100,18 @@ function startSMTPServer(store, wsNotify) {
         },
 
         onClose(session) {
-            console.log(`[SMTP] Connection closed from ${session.remoteAddress}`);
+            logger.info({ remoteAddress: session.remoteAddress }, '[SMTP] Connection closed from %s', session.remoteAddress);
         }
     });
 
     server.listen(port, '0.0.0.0', () => {
-        console.log(`SMTP Server listening on 0.0.0.0:${port}`);
-        console.log(`   Ready to receive emails for @${domain}`);
-        console.log(`   Accepting connections from any IP address`);
+        logger.info({ port, domain }, 'SMTP Server listening on 0.0.0.0:%d', port);
+        logger.info({ domain }, '   Ready to receive emails for @%s', domain);
+        logger.info('   Accepting connections from any IP address');
     });
 
     server.on('error', (err) => {
-        console.error('[SMTP] Server error:', err);
+        logger.error({ error: err }, '[SMTP] Server error');
     });
 
     return server;

@@ -1,4 +1,5 @@
 import { WebSocketServer } from 'ws';
+import logger from './utils/logger.js';
 
 /**
  * 启动 WebSocket 服务
@@ -16,12 +17,12 @@ function startWebSocketServer(server, store) {
         const email = url.searchParams.get('email');
 
         if (!email || !store.sessions.has(email)) {
-            console.warn(`WebSocket connection rejected: invalid email ${email}`);
+            logger.warn({ email }, 'WebSocket connection rejected: invalid email %s', email);
             ws.close(4000, 'Invalid email');
             return;
         }
 
-        console.log(`WebSocket connected: ${email}`);
+        logger.info({ email }, 'WebSocket connected: %s', email);
 
         // 初始化心跳状态
         ws.isAlive = true;
@@ -40,12 +41,12 @@ function startWebSocketServer(server, store) {
         }));
 
         ws.on('close', () => {
-            console.log(`WebSocket disconnected: ${email}`);
+            logger.info({ email }, 'WebSocket disconnected: %s', email);
             store.connections.delete(email);
         });
 
         ws.on('error', (error) => {
-            console.error(`WebSocket error for ${email}:`, error);
+            logger.error({ email, error }, 'WebSocket error for %s', email);
         });
     });
 
@@ -53,7 +54,7 @@ function startWebSocketServer(server, store) {
     const interval = setInterval(() => {
         wss.clients.forEach((ws) => {
             if (ws.isAlive === false) {
-                console.log('Terminating inactive WebSocket client');
+                logger.info('Terminating inactive WebSocket client');
                 return ws.terminate();
             }
 
@@ -67,10 +68,10 @@ function startWebSocketServer(server, store) {
     });
 
     wss.on('error', (error) => {
-        console.error('WebSocket Server error:', error);
+        logger.error({ error }, 'WebSocket Server error');
     });
 
-    console.log('WebSocket Server initialized');
+    logger.info('WebSocket Server initialized');
 
     // 返回推送通知函数
     return {
@@ -82,9 +83,9 @@ function startWebSocketServer(server, store) {
                         type: 'new_message',
                         message
                     }));
-                    console.log(`Pushed message to ${email}`);
+                    logger.info({ email, subject: message.subject }, 'Pushed message to %s', email);
                 } catch (error) {
-                    console.error(`Failed to push message to ${email}:`, error);
+                    logger.error({ email, error }, 'Failed to push message to %s', email);
                 }
             }
         }

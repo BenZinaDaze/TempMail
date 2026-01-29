@@ -7,6 +7,7 @@ import startWebSocketServer from './websocket.js';
 import { validateEmailPrefix } from './utils/validation.js';
 import { createRateLimiter } from './middleware/rateLimiter.js';
 import { handleAsyncError, createErrorResponse, ErrorCodes } from './utils/errorHandler.js';
+import logger from './utils/logger.js';
 
 const app = express();
 
@@ -36,17 +37,17 @@ const MAIL_DOMAIN = process.env.MAIL_DOMAIN;
 
 // 验证必需的环境变量
 if (!MAIL_DOMAIN) {
-    console.error('❌ Error: MAIL_DOMAIN environment variable is required');
-    console.error('Please set MAIL_DOMAIN in your .env file, e.g., MAIL_DOMAIN=your-domain.com');
+    logger.error({ error: 'MAIL_DOMAIN environment variable is required' }, '❌ Error: MAIL_DOMAIN environment variable is required');
+    logger.error('Please set MAIL_DOMAIN in your .env file, e.g., MAIL_DOMAIN=your-domain.com');
     process.exit(1);
 }
 
 // 初始化内存存储
 const store = new MemoryStore(MAIL_DOMAIN);
 
-console.log('TempMail Backend Server');
-console.log(`Mail domain: ${MAIL_DOMAIN}`);
-console.log('─'.repeat(50));
+logger.info({ domain: MAIL_DOMAIN }, 'TempMail Backend Server');
+logger.info({ domain: MAIL_DOMAIN }, 'Mail domain: %s', MAIL_DOMAIN);
+logger.info('─'.repeat(50));
 
 // ==================== REST API ====================
 
@@ -159,7 +160,7 @@ app.use((err, req, res, next) => {
     }
 
     // 记录错误日志
-    console.error('❌ Unhandled error:', err);
+    logger.error({ err, statusCode }, '❌ Unhandled error');
 
     // 返回标准错误响应
     res.status(statusCode).json(createErrorResponse(err, statusCode, errorCode));
@@ -190,7 +191,7 @@ app.get('*', (req, res, next) => {
 // ==================== 启动服务器 ====================
 
 const server = app.listen(PORT, () => {
-    console.log(`HTTP Server listening on port ${PORT}`);
+    logger.info({ port: PORT }, 'HTTP Server listening on port %d', PORT);
 });
 
 // 启动 WebSocket 服务
@@ -201,16 +202,16 @@ startSMTPServer(store, wsNotify);
 
 // 优雅关闭处理
 function gracefulShutdown(signal) {
-    console.log(`\n🛑 Received ${signal}, shutting down gracefully...`);
+    logger.info({ signal }, '🛑 Received %s, shutting down gracefully...', signal);
 
     // 1. 停止接受新连接
     server.close(() => {
-        console.log('✅ HTTP server closed');
+        logger.info('✅ HTTP server closed');
     });
 
     // 2. 关闭所有 WebSocket 连接
     const connections = store.connections;
-    console.log(`📡 Closing ${connections.size} WebSocket connection(s)...`);
+    logger.info({ connectionCount: connections.size }, '📡 Closing %d WebSocket connection(s)...', connections.size);
 
     connections.forEach((ws, email) => {
         ws.close(1000, 'Server shutting down');
@@ -221,13 +222,13 @@ function gracefulShutdown(signal) {
 
     // 4. 设置超时强制退出（避免卡住）
     setTimeout(() => {
-        console.error('⚠️  Forced shutdown due to timeout');
+        logger.error('⚠️  Forced shutdown due to timeout');
         process.exit(1);
     }, 5000); // 5秒超时
 
     // 5. 正常退出
     setTimeout(() => {
-        console.log('✅ Graceful shutdown completed');
+        logger.info('✅ Graceful shutdown completed');
         process.exit(0);
     }, 1000); // 1秒后退出
 }

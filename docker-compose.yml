@@ -23,3 +23,8 @@ services:
       - SMTP_PORT=2525
       - EMAIL_EXPIRY_MINUTES=60
       - MAX_MESSAGES_PER_EMAIL=50
+      
+      # 日志配置
+      # NODE_ENV 已在 Dockerfile 中设置为 production（使用 JSON 格式日志）
+      # LOG_LEVEL: 日志级别 (debug|info|warn|error)，默认 info
+      # - LOG_LEVEL=info
