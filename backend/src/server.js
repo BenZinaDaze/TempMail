@@ -4,16 +4,25 @@ import cors from 'cors';
 import MemoryStore from './store.js';
 import startSMTPServer from './smtp.js';
 import startWebSocketServer from './websocket.js';
+import { validateEmailPrefix } from './utils/validation.js';
+import { createRateLimiter } from './middleware/rateLimiter.js';
 
 const app = express();
 
 // 中间件
+// 注意：生产环境应设置 CORS_ORIGIN 为具体域名，避免使用 '*'
 const corsOptions = {
     origin: process.env.CORS_ORIGIN || '*',
     credentials: true
 };
 app.use(cors(corsOptions));
 app.use(express.json());
+
+// 配置速率限制器
+// 邮箱生成接口：每分钟 10 次请求
+const generateEmailRateLimiter = createRateLimiter(60000, 10);
+// 其他接口：每分钟 60 次请求
+const defaultRateLimiter = createRateLimiter(60000, 60);
 
 // 从环境变量读取配置
 import path from 'path';
@@ -45,9 +54,19 @@ console.log('─'.repeat(50));
  * POST /api/email/generate
  * Body: { prefix?: string }
  */
-app.post('/api/email/generate', (req, res) => {
+app.post('/api/email/generate', generateEmailRateLimiter, (req, res) => {
     try {
         const { prefix } = req.body;
+
+        // 验证邮箱前缀
+        const validation = validateEmailPrefix(prefix);
+        if (!validation.valid) {
+            return res.status(400).json({
+                error: validation.error || 'Invalid email prefix',
+                code: 'VALIDATION_ERROR'
+            });
+        }
+
         const email = store.createEmail(prefix);
         const session = store.sessions.get(email);
 

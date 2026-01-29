@@ -34,6 +34,25 @@ class MemoryStore {
      * @returns {string} 生成的邮箱地址
      */
     createEmail(prefix = null) {
+        // 验证前缀（如果提供）
+        if (prefix !== null && prefix !== undefined) {
+            // 类型检查
+            if (typeof prefix !== 'string') {
+                throw new Error('Email prefix must be a string');
+            }
+
+            // 长度检查：最大 32 字符
+            if (prefix.length > 32) {
+                throw new Error('Email prefix must be 32 characters or less');
+            }
+
+            // 字符验证：仅允许字母、数字、连字符、下划线
+            const validPattern = /^[a-zA-Z0-9_-]+$/;
+            if (!validPattern.test(prefix)) {
+                throw new Error('Email prefix can only contain letters, numbers, hyphens, and underscores');
+            }
+        }
+
         const username = prefix || this.randomStr(12);
         const address = `${username}@${this.domain}`;
 

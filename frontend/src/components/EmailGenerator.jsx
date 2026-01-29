@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { validateEmailPrefix } from "../utils/validation";
 
 export default function EmailGenerator({
   onGenerate,
@@ -14,6 +15,20 @@ export default function EmailGenerator({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // 前端校验（与后端规则一致）
+    const trimmed = prefix.trim();
+    const valueToSend = trimmed === "" ? null : trimmed;
+    const validation = validateEmailPrefix(prefix);
+    if (!validation.valid) {
+      if (onError) {
+        onError(validation.error);
+      } else {
+        alert(validation.error);
+      }
+      return;
+    }
+
     setLocalLoading(true);
 
     try {
@@ -22,10 +37,23 @@ export default function EmailGenerator({
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ prefix: prefix || null }),
+        body: JSON.stringify({ prefix: valueToSend }),
       });
 
       const data = await response.json();
+
+      if (!response.ok) {
+        // 展示后端返回的验证或错误信息
+        const message =
+          data.error || data.message || "生成邮箱失败，请稍后重试";
+        if (onError) {
+          onError(message);
+        } else {
+          alert(message);
+        }
+        return;
+      }
+
       onGenerate(data);
     } catch (error) {
       console.error("Failed to generate email:", error);
@@ -51,8 +79,8 @@ export default function EmailGenerator({
             value={prefix}
             onChange={(e) => setPrefix(e.target.value)}
             placeholder="留空则随机生成"
-            pattern="[a-zA-Z0-9\-]*"
-            title="只能包含字母、数字和连字符"
+            pattern="[a-zA-Z0-9_-]*"
+            title="只能包含字母、数字、连字符和下划线"
             disabled={isGlobalLoading}
           />
         </div>
