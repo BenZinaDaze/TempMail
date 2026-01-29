@@ -1,0 +1,33 @@
+# Git
+.git
+.gitignore
+
+# 依赖 (构建时重新安装)
+node_modules
+*/node_modules
+
+# 环境变量 (由 Docker 运行时注入)
+.env
+.env.*
+
+# 文档与说明
+*.md
+LICENSE
+docs/
+
+# 测试脚本与工具
+backend/test-email.js
+tests/
+__tests__/
+
+# 本地编辑器配置
+.vscode
+.idea
+*.log
+.DS_Store
+
+# 临时文件
+.tmp
+dist/
+build/
+coverage/
