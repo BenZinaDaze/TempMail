@@ -29,18 +29,17 @@ export default function EmailViewer({ message, onClose }) {
     return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
   };
 
-  // 下载附件
+  // 下载附件（优化版：使用更高效的 Base64 解码方式）
   const downloadAttachment = (attachment) => {
     if (!attachment.content) return;
 
     try {
-      // Base64 解码
+      // Base64 解码 - 优化：使用 Uint8Array.from 和 map 替代循环
       const byteCharacters = atob(attachment.content);
-      const byteNumbers = new Array(byteCharacters.length);
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
-      }
-      const byteArray = new Uint8Array(byteNumbers);
+      const byteArray = Uint8Array.from(
+        byteCharacters,
+        (char) => char.charCodeAt(0)
+      );
       const blob = new Blob([byteArray], { type: attachment.contentType });
 
       // 创建下载链接

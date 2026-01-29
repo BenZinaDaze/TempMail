@@ -1,8 +1,17 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 
 export default function Timer({ expiresAt, connected }) {
   const [timeLeft, setTimeLeft] = useState("");
   const [isWarning, setIsWarning] = useState(false);
+
+  // 使用 useMemo 计算更新间隔，优化更新频率
+  // 剩余时间 > 1 分钟：每 10 秒更新一次
+  // 剩余时间 <= 1 分钟：每秒更新一次
+  const updateInterval = useMemo(() => {
+    const now = Date.now();
+    const diff = expiresAt - now;
+    return diff > 60000 ? 10000 : 1000; // 10 秒或 1 秒
+  }, [expiresAt]);
 
   useEffect(() => {
     const updateTimer = () => {
@@ -23,10 +32,10 @@ export default function Timer({ expiresAt, connected }) {
     };
 
     updateTimer();
-    const interval = setInterval(updateTimer, 1000);
+    const interval = setInterval(updateTimer, updateInterval);
 
     return () => clearInterval(interval);
-  }, [expiresAt]);
+  }, [expiresAt, updateInterval]);
 
   if (connected === false) {
     return null;

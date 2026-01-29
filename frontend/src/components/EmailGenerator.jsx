@@ -79,7 +79,7 @@ export default function EmailGenerator({
             value={prefix}
             onChange={(e) => setPrefix(e.target.value)}
             placeholder="留空则随机生成"
-            pattern="[a-zA-Z0-9_-]*"
+            pattern="[a-zA-Z0-9_\-]*"
             title="只能包含字母、数字、连字符和下划线"
             disabled={isGlobalLoading}
           />
