@@ -1,5 +1,6 @@
 import { WebSocketServer } from 'ws';
 import logger from './utils/logger.js';
+import config from './config.js';
 
 /**
  * 启动 WebSocket 服务
@@ -8,8 +9,8 @@ import logger from './utils/logger.js';
  * @returns {object} 包含 notify 方法的对象
  */
 function startWebSocketServer(server, store) {
-    // 心跳检测间隔 (30秒)
-    const HEARTBEAT_INTERVAL = 30000;
+    // 心跳检测间隔，从配置读取
+    const HEARTBEAT_INTERVAL = config.heartbeatInterval;
     const wss = new WebSocketServer({ server });
 
     wss.on('connection', (ws, req) => {
@@ -61,7 +62,7 @@ function startWebSocketServer(server, store) {
             ws.isAlive = false;
             ws.ping();
         });
-    }, HEARTBEAT_INTERVAL);
+    }, config.heartbeatInterval);
 
     wss.on('close', () => {
         clearInterval(interval);

@@ -1,6 +1,7 @@
 import { SMTPServer } from 'smtp-server';
 import { simpleParser } from 'mailparser';
 import logger from './utils/logger.js';
+import config from './config.js';
 
 /**
  * 启动 SMTP 邮件接收服务（优化版）
@@ -8,8 +9,8 @@ import logger from './utils/logger.js';
  * @param {Function} wsNotify - WebSocket 通知函数
  */
 function startSMTPServer(store, wsNotify) {
-    const port = parseInt(process.env.SMTP_PORT) || 2525;
-    const domain = process.env.MAIL_DOMAIN;
+    const port = config.smtpPort;
+    const domain = config.mailDomain;
 
     const server = new SMTPServer({
         authOptional: true,

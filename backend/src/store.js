@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import logger from './utils/logger.js';
+import config from './config.js';
 
 /**
  * 内存存储管理器（轻量级）
@@ -7,8 +8,8 @@ import logger from './utils/logger.js';
  * 消息通过 WebSocket 直接推送到前端
  */
 class MemoryStore {
-    // 邮箱过期时间（毫秒），从环境变量读取，默认 60 分钟
-    static EMAIL_EXPIRY_MS = (parseInt(process.env.EMAIL_EXPIRY_MINUTES) || 60) * 60 * 1000;
+    // 邮箱过期时间（毫秒），从配置读取
+    static EMAIL_EXPIRY_MS = config.emailExpiryMinutes * 60 * 1000;
 
     constructor(domain) {
         if (!domain) {
@@ -152,7 +153,7 @@ class MemoryStore {
             if (cleaned > 0) {
                 logger.info({ cleaned }, 'Cleaned %d expired email(s)', cleaned);
             }
-        }, 60000); // 每分钟检查
+        }, config.cleanupInterval);
     }
 
     /**

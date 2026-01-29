@@ -8,13 +8,14 @@ import { validateEmailPrefix } from './utils/validation.js';
 import { createRateLimiter } from './middleware/rateLimiter.js';
 import { handleAsyncError, createErrorResponse, ErrorCodes } from './utils/errorHandler.js';
 import logger from './utils/logger.js';
+import config from './config.js';
 
 const app = express();
 
 // 中间件
 // 注意：生产环境应设置 CORS_ORIGIN 为具体域名，避免使用 '*'
 const corsOptions = {
-    origin: process.env.CORS_ORIGIN || '*',
+    origin: config.corsOrigin,
     credentials: true
 };
 app.use(cors(corsOptions));
@@ -22,31 +23,28 @@ app.use(express.json());
 
 // 配置速率限制器
 // 邮箱生成接口：每分钟 10 次请求
-const generateEmailRateLimiter = createRateLimiter(60000, 10);
+const generateEmailRateLimiter = createRateLimiter(
+    config.rateLimit.generateEmail.windowMs,
+    config.rateLimit.generateEmail.max
+);
 // 其他接口：每分钟 60 次请求
-const defaultRateLimiter = createRateLimiter(60000, 60);
+const defaultRateLimiter = createRateLimiter(
+    config.rateLimit.default.windowMs,
+    config.rateLimit.default.max
+);
 
-// 从环境变量读取配置
+// 路径处理
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const PORT = parseInt(process.env.PORT) || 3000;
-const MAIL_DOMAIN = process.env.MAIL_DOMAIN;
-
-// 验证必需的环境变量
-if (!MAIL_DOMAIN) {
-    logger.error({ error: 'MAIL_DOMAIN environment variable is required' }, '❌ Error: MAIL_DOMAIN environment variable is required');
-    logger.error('Please set MAIL_DOMAIN in your .env file, e.g., MAIL_DOMAIN=your-domain.com');
-    process.exit(1);
-}
 
 // 初始化内存存储
-const store = new MemoryStore(MAIL_DOMAIN);
+const store = new MemoryStore(config.mailDomain);
 
-logger.info({ domain: MAIL_DOMAIN }, 'TempMail Backend Server');
-logger.info({ domain: MAIL_DOMAIN }, 'Mail domain: %s', MAIL_DOMAIN);
+logger.info({ domain: config.mailDomain }, 'TempMail Backend Server');
+logger.info({ domain: config.mailDomain }, 'Mail domain: %s', config.mailDomain);
 logger.info('─'.repeat(50));
 
 // ==================== REST API ====================
@@ -134,7 +132,7 @@ app.get('/api/stats', handleAsyncError(async (req, res) => {
 app.get('/api/health', (req, res) => {
     res.json({
         status: 'ok',
-        domain: MAIL_DOMAIN,
+        domain: config.mailDomain,
         uptime: process.uptime()
     });
 });
@@ -190,8 +188,8 @@ app.get('*', (req, res, next) => {
 
 // ==================== 启动服务器 ====================
 
-const server = app.listen(PORT, () => {
-    logger.info({ port: PORT }, 'HTTP Server listening on port %d', PORT);
+const server = app.listen(config.port, () => {
+    logger.info({ port: config.port }, 'HTTP Server listening on port %d', config.port);
 });
 
 // 启动 WebSocket 服务

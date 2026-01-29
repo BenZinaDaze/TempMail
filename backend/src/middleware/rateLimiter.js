@@ -3,13 +3,18 @@
  * 基于 IP 地址的请求频率限制
  */
 
+import config from '../config.js';
+
 /**
  * 创建速率限制中间件
- * @param {number} windowMs - 时间窗口（毫秒）
- * @param {number} maxRequests - 最大请求数
+ * @param {number} windowMs - 时间窗口（毫秒），默认使用配置值
+ * @param {number} maxRequests - 最大请求数，默认使用配置值
  * @returns {Function} Express 中间件函数
  */
-export function createRateLimiter(windowMs = 60000, maxRequests = 60) {
+export function createRateLimiter(
+    windowMs = config.rateLimit.default.windowMs,
+    maxRequests = config.rateLimit.default.max
+) {
     // 存储每个 IP 的请求记录: Map<ip, { count: number, resetAt: number }>
     const requestMap = new Map();
 

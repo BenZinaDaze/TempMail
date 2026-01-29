@@ -24,6 +24,14 @@ services:
       - EMAIL_EXPIRY_MINUTES=60
       - MAX_MESSAGES_PER_EMAIL=50
       
+      # 高级配置（可选，使用默认值即可）
+      # CORS_ORIGIN: 跨域配置，默认 '*'（生产环境建议设置为具体域名）
+      # - CORS_ORIGIN=*
+      # HEARTBEAT_INTERVAL: WebSocket 心跳间隔（毫秒），默认 30000
+      # - HEARTBEAT_INTERVAL=30000
+      # CLEANUP_INTERVAL: 过期邮箱清理间隔（毫秒），默认 60000
+      # - CLEANUP_INTERVAL=60000
+      
       # 日志配置
       # NODE_ENV 已在 Dockerfile 中设置为 production（使用 JSON 格式日志）
       # LOG_LEVEL: 日志级别 (debug|info|warn|error)，默认 info
