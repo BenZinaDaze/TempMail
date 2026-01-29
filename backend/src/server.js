@@ -6,6 +6,7 @@ import startSMTPServer from './smtp.js';
 import startWebSocketServer from './websocket.js';
 import { validateEmailPrefix } from './utils/validation.js';
 import { createRateLimiter } from './middleware/rateLimiter.js';
+import { handleAsyncError, createErrorResponse, ErrorCodes } from './utils/errorHandler.js';
 
 const app = express();
 
@@ -54,91 +55,76 @@ console.log('─'.repeat(50));
  * POST /api/email/generate
  * Body: { prefix?: string }
  */
-app.post('/api/email/generate', generateEmailRateLimiter, (req, res) => {
-    try {
-        const { prefix } = req.body;
+app.post('/api/email/generate', generateEmailRateLimiter, handleAsyncError(async (req, res) => {
+    const { prefix } = req.body;
 
-        // 验证邮箱前缀
-        const validation = validateEmailPrefix(prefix);
-        if (!validation.valid) {
-            return res.status(400).json({
-                error: validation.error || 'Invalid email prefix',
-                code: 'VALIDATION_ERROR'
-            });
-        }
-
-        const email = store.createEmail(prefix);
-        const session = store.sessions.get(email);
-
-        res.json({
-            email,
-            expiresAt: session.expiresAt
-        });
-    } catch (error) {
-        console.error('❌ Failed to generate email:', error);
-        res.status(500).json({ error: 'Failed to generate email' });
+    // 验证邮箱前缀
+    const validation = validateEmailPrefix(prefix);
+    if (!validation.valid) {
+        return res.status(400).json(
+            createErrorResponse(validation.error || 'Invalid email prefix', 400, ErrorCodes.VALIDATION_ERROR)
+        );
     }
-});
+
+    const email = store.createEmail(prefix);
+    const session = store.sessions.get(email);
+
+    res.json({
+        email,
+        expiresAt: session.expiresAt
+    });
+}));
 
 /**
  * 获取邮件列表
  * GET /api/email/:address/messages
  */
-app.get('/api/email/:address/messages', (req, res) => {
-    try {
-        const session = store.getSession(req.params.address);
+app.get('/api/email/:address/messages', handleAsyncError(async (req, res) => {
+    const session = store.getSession(req.params.address);
 
-        if (!session) {
-            return res.status(404).json({ error: 'Email not found or expired' });
-        }
-
-        res.json({
-            messages: session.messages,
-            expiresAt: session.expiresAt
-        });
-    } catch (error) {
-        console.error('❌ Failed to get messages:', error);
-        res.status(500).json({ error: 'Failed to get messages' });
+    if (!session) {
+        return res.status(404).json(
+            createErrorResponse('Email not found or expired', 404, ErrorCodes.NOT_FOUND)
+        );
     }
-});
+
+    res.json({
+        messages: session.messages,
+        expiresAt: session.expiresAt
+    });
+}));
 
 /**
  * 获取单个邮件详情
  * GET /api/email/:address/messages/:messageId
  */
-app.get('/api/email/:address/messages/:messageId', (req, res) => {
-    try {
-        const session = store.getSession(req.params.address);
+app.get('/api/email/:address/messages/:messageId', handleAsyncError(async (req, res) => {
+    const session = store.getSession(req.params.address);
 
-        if (!session) {
-            return res.status(404).json({ error: 'Email not found or expired' });
-        }
-
-        const message = session.messages.find(m => m.id === req.params.messageId);
-
-        if (!message) {
-            return res.status(404).json({ error: 'Message not found' });
-        }
-
-        res.json(message);
-    } catch (error) {
-        console.error('❌ Failed to get message:', error);
-        res.status(500).json({ error: 'Failed to get message' });
+    if (!session) {
+        return res.status(404).json(
+            createErrorResponse('Email not found or expired', 404, ErrorCodes.NOT_FOUND)
+        );
     }
-});
+
+    const message = session.messages.find(m => m.id === req.params.messageId);
+
+    if (!message) {
+        return res.status(404).json(
+            createErrorResponse('Message not found', 404, ErrorCodes.NOT_FOUND)
+        );
+    }
+
+    res.json(message);
+}));
 
 /**
  * 获取系统统计信息
  * GET /api/stats
  */
-app.get('/api/stats', (req, res) => {
-    try {
-        res.json(store.getStats());
-    } catch (error) {
-        console.error('❌ Failed to get stats:', error);
-        res.status(500).json({ error: 'Failed to get stats' });
-    }
-});
+app.get('/api/stats', handleAsyncError(async (req, res) => {
+    res.json(store.getStats());
+}));
 
 /**
  * 健康检查
@@ -150,6 +136,33 @@ app.get('/api/health', (req, res) => {
         domain: MAIL_DOMAIN,
         uptime: process.uptime()
     });
+});
+
+// ==================== 全局错误处理中间件 ====================
+
+// 必须在所有路由之后、静态文件服务之前
+app.use((err, req, res, next) => {
+    // 如果响应已发送，直接传递给 Express 默认错误处理
+    if (res.headersSent) {
+        return next(err);
+    }
+
+    // 根据错误类型确定状态码
+    let statusCode = 500;
+    let errorCode = ErrorCodes.INTERNAL_ERROR;
+
+    // 如果错误对象有 statusCode 属性，使用它
+    if (err.statusCode) {
+        statusCode = err.statusCode;
+    } else if (err.status) {
+        statusCode = err.status;
+    }
+
+    // 记录错误日志
+    console.error('❌ Unhandled error:', err);
+
+    // 返回标准错误响应
+    res.status(statusCode).json(createErrorResponse(err, statusCode, errorCode));
 });
 
 // ==================== 静态文件服务 (前端集成) ====================

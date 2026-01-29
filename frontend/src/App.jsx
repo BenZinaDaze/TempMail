@@ -4,6 +4,7 @@ import EmailList from "./components/EmailList";
 import EmailViewer from "./components/EmailViewer";
 import Timer from "./components/Timer";
 import Toast from "./components/Toast";
+import ErrorBoundary from "./components/ErrorBoundary";
 import useWebSocket from "./hooks/useWebSocket";
 import "./index.css";
 
@@ -68,7 +69,8 @@ export default function App() {
   const showInbox = currentEmail && status !== "connecting";
 
   return (
-    <div className="app">
+    <ErrorBoundary>
+      <div className="app">
       <header>
         <h1>临时邮箱</h1>
         <p>60 分钟有效期 · 实时接收邮件</p>
@@ -142,6 +144,7 @@ export default function App() {
           onClose={() => setToast(null)}
         />
       )}
-    </div>
+      </div>
+    </ErrorBoundary>
   );
 }
