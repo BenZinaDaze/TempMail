@@ -17,15 +17,44 @@
 
 ```
 Mail/
-├── frontend/          # React + Vite 前端
-│   ├── src/components/ # UI 组件 (邮箱列表、查看器、计时器)
-│   ├── src/hooks/      # 自定义 Hooks (useWebSocket)
-│   └── index.css       # 全局样式与变量
+├── frontend/                 # React + Vite 前端
+│   ├── src/
+│   │   ├── components/       # UI 组件
+│   │   │   ├── EmailGenerator.jsx  # 邮箱生成
+│   │   │   ├── EmailList.jsx       # 邮件列表
+│   │   │   ├── EmailViewer.jsx     # 邮件查看器
+│   │   │   ├── ErrorBoundary.jsx   # 错误边界
+│   │   │   ├── Timer.jsx           # 过期计时器
+│   │   │   └── Toast.jsx           # 提示消息
+│   │   ├── hooks/
+│   │   │   └── useWebSocket.js     # WebSocket 连接
+│   │   ├── utils/
+│   │   │   └── validation.js       # 前端校验（含前缀黑名单）
+│   │   ├── App.jsx
+│   │   ├── main.jsx
+│   │   └── index.css               # 全局样式与变量
+│   ├── index.html
+│   └── vite.config.js
 │
-└── backend/           # Node.js 后端
-    ├── src/server.js   # HTTP API 服务器
-    ├── src/smtp.js     # SMTP 服务器 (基于 mailin)
-    └── src/store.js    # 内存会话管理
+├── backend/                  # Node.js 后端
+│   ├── src/
+│   │   ├── middleware/
+│   │   │   └── rateLimiter.js      # 速率限制
+│   │   ├── utils/
+│   │   │   ├── errorHandler.js     # 统一错误处理
+│   │   │   ├── logger.js           # 结构化日志
+│   │   │   └── validation.js      # 输入校验（含前缀黑名单）
+│   │   ├── config.js               # 配置管理
+│   │   ├── server.js               # HTTP API + 静态资源
+│   │   ├── smtp.js                 # SMTP 服务器 (smtp-server)
+│   │   ├── store.js                # 内存会话管理
+│   │   └── websocket.js            # WebSocket 服务
+│   ├── .env.example
+│   └── package.json
+│
+├── docker-compose.yml
+├── Dockerfile
+└── README.md
 ```
 
 ## 🌐 域名与 DNS 设置
