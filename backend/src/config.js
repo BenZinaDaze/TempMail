@@ -91,7 +91,20 @@ const config = {
             windowMs: 60000, // 1 分钟
             max: 60 // 每分钟 60 次
         }
-    }
+    },
+
+    // 邮箱前缀黑名单（不允许游客使用的前缀，如管理员标识）
+    // 从环境变量 EMAIL_PREFIX_BLACKLIST 读取，逗号分隔，默认包含常见保留前缀
+    emailPrefixBlacklist: (() => {
+        const defaultList = [
+            'admin', 'administrator', 'root', 'postmaster', 'webmaster', 'hostmaster',
+            'noreply', 'no-reply', 'support', 'info', 'abuse', 'security'
+        ];
+        const env = process.env.EMAIL_PREFIX_BLACKLIST;
+        if (!env) return defaultList;
+        const fromEnv = env.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+        return fromEnv.length > 0 ? fromEnv : defaultList;
+    })()
 };
 
 export default config;
