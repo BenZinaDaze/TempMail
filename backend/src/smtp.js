@@ -112,6 +112,11 @@ function startSMTPServer(store, wsNotify) {
     });
 
     server.on('error', (err) => {
+        // ETIMEDOUT：客户端连接后未在规定时间内发送数据（如端口扫描、对方 MTA 异常），属常见情况，降级为 warn
+        if (err.code === 'ETIMEDOUT' && err.syscall === 'read') {
+            logger.warn({ error: err }, '[SMTP] Connection timeout (client sent no data)');
+            return;
+        }
         logger.error({ error: err }, '[SMTP] Server error');
     });
 
