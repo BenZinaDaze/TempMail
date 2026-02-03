@@ -17,6 +17,10 @@ function startSMTPServer(store, wsNotify) {
         disabledCommands: ['AUTH'],
         banner: `Welcome to ${domain} Temporary Mail Server`,
 
+        // 禁用 TLS：纯明文 SMTP，不提供 STARTTLS
+        // 解决外部服务器尝试使用不兼容 TLS 版本时的握手失败问题
+        hideSTARTTLS: true,
+
         // 增强的 SMTP 能力声明
         onConnect(session, callback) {
             logger.info({ remoteAddress: session.remoteAddress }, '[SMTP] Connection from %s', session.remoteAddress);
@@ -60,9 +64,9 @@ function startSMTPServer(store, wsNotify) {
                     from: mail.from?.text || 'unknown',
                     subject: mail.subject || '(no subject)',
                     recipientCount: recipients.length
-                }, '[SMTP] Processing email: From: %s, Subject: %s, Recipients: %d', 
-                    mail.from?.text || 'unknown', 
-                    mail.subject || '(no subject)', 
+                }, '[SMTP] Processing email: From: %s, Subject: %s, Recipients: %d',
+                    mail.from?.text || 'unknown',
+                    mail.subject || '(no subject)',
                     recipients.length);
 
                 // 处理所有收件人
