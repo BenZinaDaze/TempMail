@@ -5,7 +5,7 @@
 const PREFIX_MAX_LENGTH = 32;
 const PREFIX_PATTERN = /^[a-zA-Z0-9_-]+$/;
 
-/** 邮箱前缀黑名单（与后端默认一致，保留/管理员标识不可使用） */
+/** 邮箱前缀敏感词黑名单（与后端默认一致，命中任意敏感词即不可使用） */
 const PREFIX_BLACKLIST = [
   "admin",
   "administrator",
@@ -41,7 +41,7 @@ export function validateEmailPrefix(prefix) {
     };
   }
 
-  if (PREFIX_BLACKLIST.includes(trimmed.toLowerCase())) {
+  if (PREFIX_BLACKLIST.some((keyword) => trimmed.toLowerCase().includes(keyword))) {
     return {
       valid: false,
       error: "该前缀为保留前缀，不可使用",

@@ -93,8 +93,8 @@ const config = {
         }
     },
 
-    // 邮箱前缀黑名单（不允许游客使用的前缀，如管理员标识）
-    // 从环境变量 EMAIL_PREFIX_BLACKLIST 读取，逗号分隔，默认包含常见保留前缀
+    // 邮箱前缀敏感词黑名单（只要包含这些词，如管理员标识，即不允许游客使用）
+    // 从环境变量 EMAIL_PREFIX_BLACKLIST 读取，逗号分隔，默认包含常见保留敏感词
     emailPrefixBlacklist: (() => {
         const defaultList = [
             'admin', 'administrator', 'root', 'postmaster', 'webmaster', 'hostmaster',

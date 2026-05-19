@@ -8,7 +8,7 @@ import config from '../config.js';
 /**
  * 验证邮箱前缀格式（含黑名单）
  * @param {string|null} prefix - 邮箱前缀
- * @param {string[]} [blacklist] - 可选，前缀黑名单（小写）；不传则使用 config.emailPrefixBlacklist
+ * @param {string[]} [blacklist] - 可选，敏感词黑名单（小写）；不传则使用 config.emailPrefixBlacklist
  * @returns {{ valid: boolean, error?: string }} 验证结果
  */
 export function validateEmailPrefix(prefix, blacklist = config.emailPrefixBlacklist) {
@@ -33,9 +33,9 @@ export function validateEmailPrefix(prefix, blacklist = config.emailPrefixBlackl
         return { valid: false, error: 'Email prefix must be 32 characters or less' };
     }
 
-    // 黑名单：不允许使用保留/管理员标识前缀
+    // 敏感词黑名单：只要前缀中包含保留/管理员标识就拒绝
     const lower = trimmed.toLowerCase();
-    if (blacklist && blacklist.includes(lower)) {
+    if (blacklist && blacklist.some(keyword => lower.includes(keyword))) {
         return { valid: false, error: '该前缀为保留前缀，不可使用' };
     }
 
