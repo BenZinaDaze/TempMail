@@ -1,0 +1,66 @@
+name: Build and Push Docker Image
+
+on:
+  push:
+    tags:
+      - "v*"
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  DOCKERHUB_IMAGE: benz1/tempmail
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve version
+        id: resolve
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          LATEST=$(git tag --sort=-version:refname | grep -E '^v' | head -n1)
+          echo "version=${LATEST}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.DOCKERHUB_IMAGE }}
+          tags: |
+            type=ref,event=tag
+            type=raw,value=${{ steps.resolve.outputs.version }},enable=${{ github.event_name == 'workflow_dispatch' && steps.resolve.outputs.version != '' }}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch' }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=registry,ref=${{ env.DOCKERHUB_IMAGE }}:buildcache
+          cache-to: type=registry,ref=${{ env.DOCKERHUB_IMAGE }}:buildcache,mode=max
