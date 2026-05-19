@@ -28,22 +28,39 @@ function startSMTPServer(store, wsNotify) {
         },
 
         onMailFrom(address, session, callback) {
-            logger.info({ address: address.address }, '[SMTP] MAIL FROM: %s', address.address);
+            logger.info({
+                remoteAddress: session.remoteAddress,
+                envelopeFrom: address.address
+            }, '[SMTP] MAIL FROM: %s (ip: %s)', address.address, session.remoteAddress);
             callback();
         },
 
         onRcptTo(address, session, callback) {
-            logger.info({ address: address.address }, '[SMTP] RCPT TO: %s', address.address);
+            const envelopeFrom = session.envelope?.mailFrom?.address || 'unknown';
+
+            logger.info({
+                remoteAddress: session.remoteAddress,
+                envelopeFrom,
+                envelopeTo: address.address
+            }, '[SMTP] RCPT TO: %s (from: %s, ip: %s)', address.address, envelopeFrom, session.remoteAddress);
 
             // 验证收件人域名
             if (!address.address.endsWith(`@${domain}`)) {
-                logger.warn({ address: address.address }, '[SMTP] Rejected: invalid domain for %s', address.address);
+                logger.warn({
+                    remoteAddress: session.remoteAddress,
+                    envelopeFrom,
+                    envelopeTo: address.address
+                }, '[SMTP] Rejected: invalid domain for %s (from: %s, ip: %s)', address.address, envelopeFrom, session.remoteAddress);
                 return callback(new Error(`550 5.1.1 We do not serve this domain`));
             }
 
             // 验证邮箱是否存在且未过期
             if (!store.hasEmail(address.address)) {
-                logger.warn({ address: address.address }, '[SMTP] Rejected: email not found or expired - %s', address.address);
+                logger.warn({
+                    remoteAddress: session.remoteAddress,
+                    envelopeFrom,
+                    envelopeTo: address.address
+                }, '[SMTP] Rejected: email not found or expired - %s (from: %s, ip: %s)', address.address, envelopeFrom, session.remoteAddress);
                 return callback(new Error(`550 5.1.1 Mailbox does not exist or has expired`));
             }
 
@@ -59,15 +76,21 @@ function startSMTPServer(store, wsNotify) {
 
                 // 从 session.envelope 获取收件人
                 const recipients = session.envelope.rcptTo || [];
+                const envelopeFrom = session.envelope.mailFrom?.address || 'unknown';
+                const headerFrom = mail.from?.text || 'unknown';
 
                 logger.info({
-                    from: mail.from?.text || 'unknown',
+                    remoteAddress: session.remoteAddress,
+                    envelopeFrom,
+                    headerFrom,
                     subject: mail.subject || '(no subject)',
                     recipientCount: recipients.length
-                }, '[SMTP] Processing email: From: %s, Subject: %s, Recipients: %d',
-                    mail.from?.text || 'unknown',
+                }, '[SMTP] Processing email: MAIL FROM=%s, Header From=%s, Subject=%s, Recipients=%d, ip=%s',
+                    envelopeFrom,
+                    headerFrom,
                     mail.subject || '(no subject)',
-                    recipients.length);
+                    recipients.length,
+                    session.remoteAddress);
 
                 // 处理所有收件人
                 recipients.forEach(recipient => {
@@ -93,10 +116,21 @@ function startSMTPServer(store, wsNotify) {
 
                     // 纯推送模式：验证邮箱有效后直接推送，不存储
                     if (store.receiveMessage(to)) {
-                        logger.info({ email: to, subject: message.subject }, '[SMTP] → Pushing message to %s: "%s"', to, message.subject);
+                        logger.info({
+                            remoteAddress: session.remoteAddress,
+                            envelopeFrom,
+                            headerFrom,
+                            envelopeTo: to,
+                            subject: message.subject
+                        }, '[SMTP] → Pushing message to %s from %s (header: %s, ip: %s): "%s"', to, envelopeFrom, headerFrom, session.remoteAddress, message.subject);
                         wsNotify(to, message);
                     } else {
-                        logger.error({ email: to }, '[SMTP] ✗ Invalid email session: %s', to);
+                        logger.error({
+                            remoteAddress: session.remoteAddress,
+                            envelopeFrom,
+                            headerFrom,
+                            envelopeTo: to
+                        }, '[SMTP] ✗ Invalid email session: %s (from: %s, header: %s, ip: %s)', to, envelopeFrom, headerFrom, session.remoteAddress);
                     }
                 });
 
